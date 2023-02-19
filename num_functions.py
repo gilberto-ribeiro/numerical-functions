@@ -1,6 +1,24 @@
 import math
 
 
+# Classes
+
+
+class Edo:
+
+    def __init__(self, function, interval):
+        self._function = function
+        self._interval = interval
+
+    @property
+    def interval(self):
+        return tuple(self._interval)
+    
+    @interval.setter
+    def interval(self, interval):
+        self._interval = tuple(interval)
+
+
 #FUNÇÕES COMPLEMENTARES
 
 
