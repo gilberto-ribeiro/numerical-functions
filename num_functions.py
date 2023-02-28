@@ -1,46 +1,97 @@
 import math
+import numpy as np
+from typing import Union, List, Tuple
 
 
 # Classes
 
 
-class Edo:
+class Funcao:
 
-    def __init__(self, function, interval):
-        self._function = function
-        self._interval = interval
+    def __init__(self, funcao) -> None:
+        self._funcao = funcao
+        self._intervalo: Tuple[float] = (-1, 1)
+        self._passos: int = 100
+        self.altera_passo_pontos()
+
+    def __str__(self) -> str:
+        return 'Função'
+    
+    @property
+    def intervalo(self) -> Tuple[float]:
+        return self._intervalo
 
     @property
-    def interval(self):
-        return tuple(self._interval)
+    def passos(self) -> int:
+        return self._passos
     
-    @interval.setter
-    def interval(self, interval):
-        self._interval = tuple(interval)
+    @property
+    def N(self) -> int:
+        return self.passos
+    
+    @property
+    def passo(self) -> float:
+        return self._passo_h
+    
+    @property
+    def h(self) -> float:
+        return self.passo
+    
+    @property
+    def pontos(self) -> List[float]:
+        return self._pontos
+    
+    @property
+    def x(self) -> List[float]:
+        return self.pontos
+
+    @intervalo.setter
+    def intervalo(self, intervalo) -> None:
+        self._intervalo: Tuple[float] = intervalo
+        self.altera_passo_pontos()
+    
+    @passos.setter
+    def passos(self, passos) -> None:
+        self._passos: int = passos
+        self.altera_passo_pontos()
+
+    @passos.setter
+    def N(self, passos) -> None:
+        self.passos = passos
+
+    @staticmethod
+    def gera_passo(intervalo: Tuple[float], passos: int) -> float:
+        inicio, fim = intervalo
+        return (fim - inicio) / passos
+    
+    @staticmethod
+    def gera_pontos(intervalo: Tuple[float], passos: int, passo: float) -> List[float]:
+        inicio = intervalo[0]
+        pontos = [inicio]
+        for i in range(passos):
+            pontos.append(pontos[i] + passo)
+        return pontos
+    
+    def altera_passo_pontos(self) -> None:
+        self._passo_h: float = self.gera_passo(self._intervalo, self._passos)
+        self._pontos: List[float] = self.gera_pontos(self._intervalo, self._passos, self._passo_h)
+
+    def subintervalos(self) -> List[Tuple[float]]:
+        return [(self._pontos[i], self._pontos[i+1]) for i in range(self._passos)]
+
+
+class Edo(Funcao):
+    
+    @property
+    def condicao_inicial(self) -> List[float]:
+        return self._condicao_inicial
+
+    @condicao_inicial.setter
+    def condicao_inicial(self, condicao_inicial: List[float]) -> None:
+        self._condicao_inicial: List[float] = condicao_inicial
 
 
 #FUNÇÕES COMPLEMENTARES
-
-
-def subint(a, b, N):
-    #Função que retorna uma lista com N subintervalos interitados
-    #entre a e b.
-    #
-    #subint(a, b, N)
-    #
-    #a e b são os interites do intervalo.
-    #N é o número de subintervalos.
-    #
-    #Desenvolvida por: Gilberto Ribeiro Pinto Júnior.
-    #Última atualização: 30/01/2023.
-    N = int(N)
-    h = (b-a)/N
-    x = [float(a)]
-    for i in range(N):
-        x.append(x[i]+h)
-    intervals = [(x[i],x[i+1]) for i in range(N)]
-    return {'points': x, 'intervals': intervals, 'h': h}
-
 
 def subint_tab(x):
     intervals = [(x[i],x[i+1]) for i in range(len(x)-1)]
