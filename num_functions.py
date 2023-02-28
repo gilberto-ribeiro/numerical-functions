@@ -15,7 +15,7 @@ class Funcao:
         self.altera_passo_pontos()
 
     def __str__(self) -> str:
-        return 'Função'
+        return f'Função: {self._funcao(self._intervalo[1], self._passo_h)}'
     
     @property
     def intervalo(self) -> Tuple[float]:
@@ -72,6 +72,18 @@ class Funcao:
             pontos.append(pontos[i] + passo)
         return pontos
     
+    @staticmethod
+    def transpor(matriz: List[List[float]]) -> List[List[float]]:
+        # Fonte: https://docs.python.org/3/tutorial/datastructures.html
+        return [[linha[i] for linha in matriz] for i in range(len(matriz[0]))]
+    
+    @staticmethod
+    def proximo_multiplo(dividendo: int, divisor: int) -> int:
+        if dividendo % divisor == 0:
+            return dividendo
+        else:
+            return dividendo + divisor - dividendo%divisor
+    
     def altera_passo_pontos(self) -> None:
         self._passo_h: float = self.gera_passo(self._intervalo, self._passos)
         self._pontos: List[float] = self.gera_pontos(self._intervalo, self._passos, self._passo_h)
@@ -86,31 +98,59 @@ class Edo(Funcao):
     def condicao_inicial(self) -> List[float]:
         return self._condicao_inicial
 
+    @property
+    def IC(self) -> List[float]:
+        return self.condicao_inicial
+    
+    @property
+    def y(self) -> List[List[float]]:
+        return self._y
+    
+    @property
+    def xy(self) -> List[List[float]]:
+        xy = self.y
+        for x, y in zip(self.x, xy):
+            y.insert(0, x)
+        return xy
+
     @condicao_inicial.setter
     def condicao_inicial(self, condicao_inicial: List[float]) -> None:
         self._condicao_inicial: List[float] = condicao_inicial
 
+    @IC.setter
+    def IC(self, condicao_inicial: List[float]) -> None:
+        self.condicao_inicial: List[float] = condicao_inicial
 
-#FUNÇÕES COMPLEMENTARES
+    def rk4(self, xi, y, h, n, metodo='classico'):
+        if metodo == 'padrao':
+            metodo = 'classico'
+        constantes = {'classico': (1/6, 2/6, 2/6, 1/6, 1/2, 1/2, 1/2, 0, 1/2, 1, 0, 0, 1)}
+        c1, c2, c3, c4, a2, b21, a3, b31, b32, a4, b41, b42, b43 = constantes[metodo]
+        k1 = self._funcao(xi, y)
+        k2 = self._funcao(xi + a2*h, [y[i] + b21*k1[i]*h for i in range(n)])
+        k3 = self._funcao(xi + a3*h, [y[i] + b31*k1[i]*h + b32*k2[i]*h for i in range(n)])
+        k4 = self._funcao(xi + a4*h, [y[i] + b41*k1[i]*h + b42*k2[i]*h + b43*k3[i]*h for i in range(n)])
+        y = [y[i] + (c1*k1[i] + c2*k2[i] + c3*k3[i] + c4*k4[i])*h for i in range(n)]
+        return y
+
+    def rungekutta(self, rk: str = 'rk4', metodo: str = 'padrao') -> None:
+        opcoes_de_rungekutta = {'rk2': rk2, 'rk3': rk3, 'rk4': self.rk4}
+        funcao_rungekutta = opcoes_de_rungekutta[rk]
+        x, h, y, n = self.x, self.h, self.IC, len(self.IC)
+        y_saida = list()
+        for i in range(len(x)):
+            y_saida.append(y)
+            y = funcao_rungekutta(x[i], y, h, n, metodo)
+            # y = corretor(f, x, y, yout, h, n, i)
+        self._y = y_saida
+
+
+# #FUNÇÕES COMPLEMENTARES
 
 def subint_tab(x):
     intervals = [(x[i],x[i+1]) for i in range(len(x)-1)]
     h = [abs(x[1]-x[0]) for x in intervals]
     return {'intervals': intervals, 'h': h}
-
-
-def proxmultiplo(N, d):
-    if N%d == 0:
-        return N
-    else:
-        return N+d-N%d
-
-
-def transpor(matrix):
-    # Fonte: https://docs.python.org/3/tutorial/datastructures.html
-    n = len(matrix[0])
-    transposed = [[row[i] for row in matrix] for i in range(n)]
-    return transposed
 
 
 def dados_edo(data, file='ode'):
