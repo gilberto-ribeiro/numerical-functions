@@ -12,11 +12,14 @@ def f(x, y):
 
 fun = Edo(f)
 fun.IC = [3]
-fun.N = 10
-fun.intervalo = (0, 1.5)
+fun.N = 5
+fun.intervalo = (0, 2.5)
 print(fun.IC)
 print(fun.N)
 print(fun.intervalo)
 print(fun.h)
-fun.rungekutta('rk4', 'classico')
-print(fun.xy)
+fun.rungekutta('rk4')
+print(type(fun.xy))
+print(np.array(fun.xy))
+fun.gera_dados()
+fun.gnuplot()

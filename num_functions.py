@@ -12,7 +12,7 @@ class Funcao:
         self._funcao = funcao
         self._intervalo: Tuple[float] = (-1, 1)
         self._passos: int = 100
-        self.altera_passo_pontos()
+        self.atualiza_passo_pontos()
 
     def __str__(self) -> str:
         return f'Função: {self._funcao(self._intervalo[1], self._passo_h)}'
@@ -48,12 +48,12 @@ class Funcao:
     @intervalo.setter
     def intervalo(self, intervalo) -> None:
         self._intervalo: Tuple[float] = intervalo
-        self.altera_passo_pontos()
+        self.atualiza_passo_pontos()
     
     @passos.setter
     def passos(self, passos) -> None:
         self._passos: int = passos
-        self.altera_passo_pontos()
+        self.atualiza_passo_pontos()
 
     @passos.setter
     def N(self, passos) -> None:
@@ -84,7 +84,7 @@ class Funcao:
         else:
             return dividendo + divisor - dividendo%divisor
     
-    def altera_passo_pontos(self) -> None:
+    def atualiza_passo_pontos(self) -> None:
         self._passo_h: float = self.gera_passo(self._intervalo, self._passos)
         self._pontos: List[float] = self.gera_pontos(self._intervalo, self._passos, self._passo_h)
 
@@ -93,6 +93,12 @@ class Funcao:
 
 
 class Edo(Funcao):
+
+    def __init__(self, funcao):
+        super().__init__(funcao)
+        self._titulo = 'EDO'
+        self._eixo_x = 'x'
+        self._eixo_y = 'y'
     
     @property
     def condicao_inicial(self) -> List[float]:
@@ -108,10 +114,7 @@ class Edo(Funcao):
     
     @property
     def xy(self) -> List[List[float]]:
-        xy = self.y
-        for x, y in zip(self.x, xy):
-            y.insert(0, x)
-        return xy
+        return self._xy
 
     @condicao_inicial.setter
     def condicao_inicial(self, condicao_inicial: List[float]) -> None:
@@ -120,6 +123,56 @@ class Edo(Funcao):
     @IC.setter
     def IC(self, condicao_inicial: List[float]) -> None:
         self.condicao_inicial: List[float] = condicao_inicial
+
+    @staticmethod
+    def gera_xy(vetor_x: List[float], matriz_y: List[List[float]]) -> List[List[float]]:
+        for x, y in zip(vetor_x, matriz_y):
+            y.insert(0, x)
+        return matriz_y
+
+    def gera_dados(self, nome_arquivo: str = 'edo'):
+        with open('dados_' + nome_arquivo + '.dat', 'w') as arquivo:
+            for linha in self.xy:
+                linha = [str(i) for i in linha]
+                linha = ' '.join(linha) + '\n'
+                arquivo.write(linha)
+            arquivo.close()
+
+    def gnuplot(self, nome_arquivo: str = 'edo'):
+        self.gera_dados(nome_arquivo)
+        with open('grafico_' + nome_arquivo + '.gp', 'w') as arquivo:
+            arquivo.write(
+f'''set title "{self._titulo}"
+set xlabel "{self._eixo_x}"
+set ylabel "{self._eixo_y}"'''
+            )
+            arquivo.close()
+
+    def rk2(self, xi, y, h, n, metodo='heun'):
+        if metodo == 'padrao':
+            metodo = 'heun'
+        constantes = {'euler_modificado': (1/2, 1/2, 1, 1),
+                'euler_ponto_central': (0, 1, 1/2, 1/2),
+                'heun': (1/4, 3/4, 2/3, 2/3)}
+        c1, c2, a2, b21 = constantes[metodo]
+        k1 = self._funcao(xi, y)
+        k2 = self._funcao(xi + a2*h, [y[i] + b21*k1[i]*h for i in range(n)])
+        y = [y[i] + (c1*k1[i] + c2*k2[i])*h for i in range(n)]
+        return y
+
+    def rk3(self, xi, y, h, n, metodo='classico'):
+        if metodo == 'padrao':
+            metodo = 'classico'
+        constantes = {'classico': (1/6, 4/6, 1/6, 1/2, 1/2, 1, -1, 2),
+                'nystrom': (2/8, 3/8, 3/8, 2/3, 2/3, 2/3, 0, 2/3),
+                'quase_otimo': (2/9, 3/9, 4/9, 1/2, 1/2, 3/4, 0, 3/4),
+                'heun': (1/4, 0, 3/4, 1/3, 1/3, 2/3, 0, 2/3)}
+        c1, c2, c3, a2, b21, a3, b31, b32 = constantes[metodo]
+        k1 = self._funcao(xi, y)
+        k2 = self._funcao(xi + a2*h, [y[i] + b21*k1[i]*h for i in range(n)])
+        k3 = self._funcao(xi + a3*h, [y[i] + b31*k1[i]*h + b32*k2[i]*h for i in range(n)])
+        y = [y[i] + (c1*k1[i] + c2*k2[i] + c3*k3[i])*h for i in range(n)]
+        return y
 
     def rk4(self, xi, y, h, n, metodo='classico'):
         if metodo == 'padrao':
@@ -134,7 +187,7 @@ class Edo(Funcao):
         return y
 
     def rungekutta(self, rk: str = 'rk4', metodo: str = 'padrao') -> None:
-        opcoes_de_rungekutta = {'rk2': rk2, 'rk3': rk3, 'rk4': self.rk4}
+        opcoes_de_rungekutta = {'rk2': self.rk2, 'rk3': self.rk3, 'rk4': self.rk4}
         funcao_rungekutta = opcoes_de_rungekutta[rk]
         x, h, y, n = self.x, self.h, self.IC, len(self.IC)
         y_saida = list()
@@ -142,7 +195,8 @@ class Edo(Funcao):
             y_saida.append(y)
             y = funcao_rungekutta(x[i], y, h, n, metodo)
             # y = corretor(f, x, y, yout, h, n, i)
-        self._y = y_saida
+        self._y: List[List[float]] = y_saida
+        self._xy: List[List[float]] = self.gera_xy(self.x, self.y)
 
 
 # #FUNÇÕES COMPLEMENTARES
@@ -151,21 +205,6 @@ def subint_tab(x):
     intervals = [(x[i],x[i+1]) for i in range(len(x)-1)]
     h = [abs(x[1]-x[0]) for x in intervals]
     return {'intervals': intervals, 'h': h}
-
-
-def dados_edo(data, file='ode'):
-    x = data['x']
-    y = data['y']
-    n = len(x)
-    with open('data_'+file, 'w') as fhand:
-        for i in range(n):
-            row = [x[i]]
-            row.extend(y[i])
-            row = [str(j) for j in row]
-            row = ' '.join(row)+'\n'
-            fhand.write(row)
-        fhand.close()
-
 
 def gnuplot_edo(data, file='ode', p={'title': 'Resolução das EDOs', 'axes': ['x', 'y']}):
     dados_edo(data, file)
