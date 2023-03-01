@@ -99,6 +99,7 @@ class Edo(Funcao):
         self._titulo = 'EDO'
         self._eixo_x = 'x'
         self._eixo_y = 'y'
+        self._formato_grafico = ['pdf']
     
     @property
     def condicao_inicial(self) -> List[float]:
@@ -115,6 +116,34 @@ class Edo(Funcao):
     @property
     def xy(self) -> List[List[float]]:
         return self._xy
+    
+    @property
+    def titulo(self) -> str:
+        return self._titulo
+    
+    @property
+    def eixo_x(self) -> str:
+        return self._eixo_x
+    
+    @property
+    def eixo_y(self) -> str:
+        return self._eixo_y
+    
+    @property
+    def limites_x(self) -> Tuple[float]:
+        return self._limites_x
+    
+    @property
+    def limites_y(self) -> Tuple[float]:
+        return self._limites_y
+    
+    @property
+    def legendas(self) -> List[str]:
+        return self._legendas
+    
+    @property
+    def formato_grafico(self) -> List[str]:
+        return self._formato_grafico
 
     @condicao_inicial.setter
     def condicao_inicial(self, condicao_inicial: List[float]) -> None:
@@ -123,6 +152,34 @@ class Edo(Funcao):
     @IC.setter
     def IC(self, condicao_inicial: List[float]) -> None:
         self.condicao_inicial: List[float] = condicao_inicial
+
+    @titulo.setter
+    def titulo(self, titulo) -> None:
+        self._titulo = titulo
+
+    @eixo_x.setter
+    def eixo_x(self, eixo_x) -> None:
+        self._eixo_x = eixo_x
+
+    @eixo_y.setter
+    def eixo_y(self, eixo_y) -> None:
+        self._eixo_y = eixo_y
+
+    @limites_x.setter
+    def limites_x(self, limites_x) -> None:
+        self._limites_x = limites_x
+
+    @limites_y.setter
+    def limites_y(self, limites_y) -> None:
+        self._limites_y = limites_y
+
+    @legendas.setter
+    def legendas(self, legendas) -> None:
+        self._legendas = legendas
+
+    @formato_grafico.setter
+    def formato_grafico(self, formato_grafico) -> None:
+        self._formato_grafico = formato_grafico
 
     @staticmethod
     def gera_xy(vetor_x: List[float], matriz_y: List[List[float]]) -> List[List[float]]:
@@ -140,11 +197,39 @@ class Edo(Funcao):
 
     def gnuplot(self, nome_arquivo: str = 'edo'):
         self.gera_dados(nome_arquivo)
-        with open('grafico_' + nome_arquivo + '.gp', 'w') as arquivo:
+        fim_de_linha = (len(self.IC) - 1) * [', '] + ['\n']
+        with open('plota_' + nome_arquivo + '.gp', 'w') as arquivo:
             arquivo.write(
 f'''set title "{self._titulo}"
 set xlabel "{self._eixo_x}"
-set ylabel "{self._eixo_y}"'''
+set ylabel "{self._eixo_y}"
+'''
+            )
+            if hasattr(self, '_limites_x'):
+                arquivo.write(f'set xrange [{self._limites_x[0]}:{self._limites_x[1]}]\n')
+            else:
+                arquivo.write(f'set xrange [{self.x[0]}:{self.x[-1]}]\n')
+            if hasattr(self, '_limites_y'):
+                arquivo.write(f'set yrange [{self._limites_y[0]}:{self._limites_y[1]}]\n')
+            for i in range(len(self.IC)):
+                if hasattr(self, 'legendas') and i <= len(self.legendas) - 1:
+                    legenda = self.legendas[i] # REVISAR
+                else:
+                    legenda = f'y[{i}]'
+                if i == 0:
+                    arquivo.write(f'plot "dados_{nome_arquivo}.dat" u 1:{str(i+2)} t "{legenda}" w l{fim_de_linha[i]}')
+                else:
+                    arquivo.write(f'"" u 1:{str(i+2)} t "{legenda}" w l{fim_de_linha[i]}')
+            for formato in self._formato_grafico:
+                arquivo.write(
+f'''set terminal {formato}cairo
+set output "grafico_{nome_arquivo}.{formato}"
+replot
+'''
+                )
+            arquivo.write(
+f'''set output
+set terminal qt'''
             )
             arquivo.close()
 
@@ -189,7 +274,7 @@ set ylabel "{self._eixo_y}"'''
     def rungekutta(self, rk: str = 'rk4', metodo: str = 'padrao') -> None:
         opcoes_de_rungekutta = {'rk2': self.rk2, 'rk3': self.rk3, 'rk4': self.rk4}
         funcao_rungekutta = opcoes_de_rungekutta[rk]
-        x, h, y, n = self.x, self.h, self.IC, len(self.IC)
+        x, h, y, n = self.x, self.h, self.IC.copy(), len(self.IC)
         y_saida = list()
         for i in range(len(x)):
             y_saida.append(y)
