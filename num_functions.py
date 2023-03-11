@@ -198,7 +198,7 @@ class Edo(Funcao):
     def gnuplot(self, nome_arquivo: str = 'edo'):
         self.gera_dados(nome_arquivo)
         fim_de_linha = (len(self.IC) - 1) * [', '] + ['\n']
-        with open('plota_' + nome_arquivo + '.gp', 'w') as arquivo:
+        with open('plota_' + nome_arquivo + '.gp', 'w', encoding = 'utf8') as arquivo:
             arquivo.write(
 f'''set title "{self._titulo}"
 set xlabel "{self._eixo_x}"
@@ -222,14 +222,14 @@ set ylabel "{self._eixo_y}"
                     arquivo.write(f'"" u 1:{str(i+2)} t "{legenda}" w l{fim_de_linha[i]}')
             for formato in self._formato_grafico:
                 arquivo.write(
-f'''set terminal {formato}cairo
+f'''set terminal {formato}cairo font "courier"
 set output "grafico_{nome_arquivo}.{formato}"
 replot
 '''
                 )
             arquivo.write(
 f'''set output
-set terminal qt'''
+set terminal wxt'''
             )
             arquivo.close()
 
